@@ -1,7 +1,6 @@
 #!/bin/sh
 
 DATE=`date +%F`
-OLD_BACKUP_DATE=`date --date="${RETENTION_DAYS} days ago" +%F`
 GCLOUD_CONFIG_FILE_PATH="/root/.config/gcloud/configurations/config_default"
 GCLOUD_KEY_FILE_PATH="key_file.json"
 
@@ -18,12 +17,10 @@ do
   MONGO_DB_NAME=$(echo $MONGO_URI | tr "@" "\n" | tail -1)
   BACKUP=$(echo $MONGO_DB_NAME | tr "/" "\n" | head -n 1)
 
-
   echo "Performing backup of $MONGO_DB_NAME"
 
   # Backup variables
   BACKUP_NAME="$BACKUP-$DATE"
-  OLD_BACKUP_NAME="$BACKUP-$OLD_BACKUP_DATE*"
   BACKUP_ARCHIVE_NAME=$BACKUP_NAME.tar.gz
 
   # Create dump
@@ -38,15 +35,6 @@ do
   # Upload archive to Google Cloud
   echo "Uploading gs://$GCLOUD_BUCKET_NAME/$BACKUP_ARCHIVE_NAME"
   gsutil cp $BACKUP_ARCHIVE_NAME gs://$GCLOUD_BUCKET_NAME
-
-  # Delete backup files
-  rm -rf $BACKUP_NAME $BACKUP_ARCHIVE_NAME
-
-  # Delete backups older than retention period on Google Cloud
-  if `gsutil -q stat gs://$GCLOUD_BUCKET_NAME/$OLD_BACKUP_NAME`;then
-    echo "Deleting gs://$GCLOUD_BUCKET_NAME/$OLD_BACKUP_NAME"
-    gsutil rm gs://$GCLOUD_BUCKET_NAME/$OLD_BACKUP_NAME
-  fi
 
   echo "Database backup of $MONGO_DB_NAME complete!"
 done
